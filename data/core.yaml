@@ -530,6 +530,10 @@ en:
       connected_to_hidden:
         single: This point can't be extracted because it is connected to a hidden feature.
         multiple: Points can't be extracted from these features because some are connected to hidden features.
+    download_full_relation:
+      too_big:
+        title: "{name} is too big to download!"
+        subtitle: "Fully downloading {name} may cause iD to crash. If you continue, only a subset of {name} will be downloaded."
   restriction:
     controls:
       distance: Distance

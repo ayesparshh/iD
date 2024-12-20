@@ -20,6 +20,7 @@ import { uiSection } from '../section';
 import { uiTooltip } from '../tooltip';
 import { utilArrayGroupBy, utilArrayIntersection } from '../../util/array';
 import { utilDisplayName, utilNoAuto, utilHighlightEntities, utilUniqueDomId } from '../../util';
+import { uiAsyncModal } from '../modal_async';
 
 
 export function uiSectionRawMembershipEditor(context) {
@@ -205,15 +206,64 @@ export function uiSectionRawMembershipEditor(context) {
     }
 
 
-    function downloadMembers(d3_event, d) {
+    async function downloadMembers(d3_event, d) {
         d3_event.preventDefault();
         const button = d3_select(this);
 
-        // display the loading indicator
-        button.classed('loading', true);
-        context.loadEntity(d.relation.id, function() {
+        if (d.relation.members.length > 250) {
+            // loading this many entities into the graph
+            // may crash iD, so we show a warning.
+            const name = utilDisplayName(d.relation);
+            const confirmed = await uiAsyncModal(context).open(
+                t.append('operations.download_full_relation.too_big.title', { name }),
+                t.append('operations.download_full_relation.too_big.subtitle', { name }),
+            );
+
+            if (!confirmed) return; // user clicked cancel
+
+            // display the loading indicator
+            // button.classed('loading', true);
+
+            // get the index of every selected entity
+            const indexies = new Set(_entityIDs.map(
+                entityId => d.relation.members.findIndex(m => m.id === entityId)
+            ));
+
+            // clone to prevent an infinite loop
+            for (const index of [...indexies]) {
+                // add the next and previous members
+                indexies.add(index - 1);
+                indexies.add(index + 1);
+            }
+
+            // now filter indexies to find the members that
+            // are not already downloaded
+            const membersToDownload = [...indexies]
+                .map(index => d.relation.members[index])
+                .filter(Boolean)
+                .filter(m => !context.graph().hasEntity(m));
+
+            const promises = membersToDownload.map(() => {
+                return new Promise(resolve => {
+                    context.loadEntity(d.relation.id, resolve);
+                });
+            });
+            await Promise.all(promises);
+
+            button.classed('loading', false);
             section.reRender();
-        });
+
+        } else {
+            // the relation is small enough that we can
+            // load every member.
+
+            // display the loading indicator
+            button.classed('loading', true);
+
+            context.loadEntity(d.relation.id, function() {
+                section.reRender();
+            });
+        }
     }
 
 
