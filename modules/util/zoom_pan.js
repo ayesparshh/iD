@@ -1,6 +1,3 @@
-// Adapted from d3-zoom to handle pointer events.
-// https://github.com/d3/d3-zoom/blob/523ccff340187a3e3c044eaa4d4a7391ea97272b/src/zoom.js
-
 import { dispatch as d3_dispatch } from 'd3-dispatch';
 import { interpolateZoom } from 'd3-interpolate';
 import { select as d3_select } from 'd3-selection';
@@ -30,7 +27,9 @@ function defaultExtent() {
 }
 
 function defaultWheelDelta(d3_event) {
-  return -d3_event.deltaY * (d3_event.deltaMode === 1 ? 0.05 : d3_event.deltaMode ? 1 : 0.002);
+  // Normalize WheelEvent.deltaY to 100 for consistency across browsers
+  const normalizedDeltaY = d3_event.deltaY * (d3_event.deltaMode === 1 ? 0.98 : d3_event.deltaMode ? 0.925 : 0.002);
+  return -normalizedDeltaY;
 }
 
 function defaultConstrain(transform, extent, translateExtent) {
